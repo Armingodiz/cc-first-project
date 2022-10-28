@@ -5,6 +5,7 @@ import (
 	"cc-first-project/user-service/services/brokerService"
 	"cc-first-project/user-service/services/userService"
 	"net/http"
+	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,17 +22,21 @@ func (u *UserController) AddAdvertisement() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		ad.State = models.AdvertisementStatePending
+		adid := uuid.New()
+		ad.Id = adid.String()
+		url, err := u.UserService.UploadImageFile(ad.Id, ad.Image)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		ad.Image = url
 		id, err := u.UserService.CreateAdvertisement(&ad)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		err = u.BrokerService.Publish(ad)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		err = u.UserService.UploadImageFile(ad.Id, ad.Image)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

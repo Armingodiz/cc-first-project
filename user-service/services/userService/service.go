@@ -3,14 +3,14 @@ package userService
 import (
 	"context"
     "io"
-    "log"
+    "fmt"
     "net/http"
     "os"
     "github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/credentials"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/uuid"
+    "github.com/aws/aws-sdk-go/service/s3"
 	"cc-first-project/user-service/models"
 	"cc-first-project/user-service/store"
 )
@@ -18,7 +18,7 @@ import (
 type UserService interface {
 	CreateAdvertisement(ad *models.Advertisement) (string, error)
 	GetAdvertisement(adId string) (*models.Advertisement, error)
-	UploadImageFile(adId string, imageUrl string) error
+	UploadImageFile(adId string, imageUrl string) (string, error)
 }
 
 var simpleContext = context.Background()
@@ -34,9 +34,6 @@ type userService struct {
 }
 
 func (s *userService) CreateAdvertisement(ad *models.Advertisement) (string, error) {
-	ad.State = models.AdvertisementStatePending
-	id := uuid.New()
-    ad.Id = id.String()
 	return ad.Id, s.Store.CreateAdvertisement(simpleContext, ad)
 }
 
@@ -44,26 +41,26 @@ func (s *userService) GetAdvertisement(adId string) (*models.Advertisement, erro
 	return s.Store.GetAdvertisement(simpleContext, adId)
 }
 
-func (s *userService) UploadImageFile(adId string, imageUrl string) error {
+func (s *userService) UploadImageFile(adId string, imageUrl string) (string,error) {
 	fname := "image.jpg"
     f, err := os.Create(fname)
     if err != nil {
-        log.Fatal(err)
+        return "", err
     }
     defer f.Close()
     res, err := http.Get(imageUrl)
     if err != nil {
-        log.Fatal(err)
+        return "", err
     }
     defer res.Body.Close()
     _, err = io.Copy(f, res.Body)
 
     if err != nil {
-        log.Fatal(err)
+        return "", err
     }
     file, err := os.Open(fname)
     if err != nil {
-        return err
+        return "", err
     }
     defer file.Close()
 
@@ -78,5 +75,19 @@ func (s *userService) UploadImageFile(adId string, imageUrl string) error {
         Key: aws.String(adId),
         Body: file,
     })
-	return err
+    if err != nil {
+        return "", err
+    }
+    params := &s3.PutObjectAclInput{
+        Bucket: aws.String("arminccproject"),
+        Key:    aws.String(adId),
+        ACL:    aws.String("public-read"), // private or public-read
+    }
+    svc := s3.New(sess, &aws.Config{
+        Region:   aws.String("default"),
+        Endpoint: aws.String("https://s3.ir-thr-at1.arvanstorage.com"),
+    })
+    // Set bucket ACL
+    _, err = svc.PutObjectAcl(params)
+	return fmt.Sprintf("%s/%s", "https://s3.ir-thr-at1.arvanstorage.com", adId), err
 }
