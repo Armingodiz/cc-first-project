@@ -67,35 +67,15 @@ func (s *userService) UploadImageFile(adId string, imageUrl string) error {
     }
     defer file.Close()
 
-    // Initialize a session in us-west-2 that the SDK will use to load
-    // credentials from the shared credentials file ~/.aws/credentials.
-
     sess, err := session.NewSession(&aws.Config{
         Credentials: credentials.NewStaticCredentials("0f4b4ae8-3d7f-4051-9c5a-6e4c36cba55b", "0f16304e084b0ce416c28a3a6780eac1485831bdfe034c039356767bee37623b", ""),
         Region:      aws.String("default"),
         Endpoint:    aws.String("https://s3.ir-thr-at1.arvanstorage.com"),
     })
-
-    // Setup the S3 Upload Manager. Also see the SDK doc for the Upload Manager
-    // for more information on configuring part size, and concurrency.
-    //
-    // http://docs.aws.amazon.com/sdk-for-go/api/service/s3/s3manager/#NewUploader
     uploader := s3manager.NewUploader(sess)
-
-    // Upload the file's body to S3 bucket as an object with the key being the
-    // same as the filename.
     _, err = uploader.Upload(&s3manager.UploadInput{
         Bucket: aws.String("arminccproject"),
-
-        // Can also use the `filepath` standard library package to modify the
-        // filename as need for an S3 object key. Such as turning absolute path
-        // to a relative path.
         Key: aws.String(adId),
-
-        // The file to be uploaded. io.ReadSeeker is preferred as the Uploader
-        // will be able to optimize memory when uploading large content. io.Reader
-        // is supported, but will require buffering of the reader's bytes for
-        // each part.
         Body: file,
     })
 	return err

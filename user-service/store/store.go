@@ -10,7 +10,7 @@ import (
 )
 
 func NewStore(db *sql.DB) Store {
-	_, err := db.Query("create table if not exists user_advertisements (id varchar(255), description varchar(255), email varchar(255), state varchar(255), category varchar(255))")
+	_, err := db.Query("create table if not exists ads (id varchar(255), description varchar(255), email varchar(255), state varchar(255), category varchar(255), image varchar(255))")
 	if err != nil {
 		panic(err)
 		return nil
@@ -27,19 +27,19 @@ type PostgresStore struct {
 }
 
 func (s *PostgresStore) CreateAdvertisement(ctx context.Context, ad *models.Advertisement) error {
-	_, err := s.Db.Query("INSERT INTO user_advertisements (id, description, email, state, category) VALUES ($1, $2, $3, $4, $5)", ad.Id, ad.Description, ad.Email, ad.State, ad.Category)
+	_, err := s.Db.Query("INSERT INTO ads (id, description, email, state, category, image) VALUES ($1, $2, $3, $4, $5, $6)", ad.Id, ad.Description, ad.Email, ad.State, ad.Category, ad.Image)
 	return err
 }
 
 func (s *PostgresStore) GetAdvertisement(ctx context.Context, adId string) (*models.Advertisement, error) {
-	rows, err := s.Db.Query("SELECT * FROM user_advertisements WHERE id = $1", adId)
+	rows, err := s.Db.Query("SELECT * FROM ads WHERE id = $1", adId)
 	if err != nil {
 		return nil, errors.New("error while getting advertisement" + err.Error())
 	}
 
 	for rows.Next() {
 		var result models.Advertisement
-		err = rows.Scan(&result.Id, &result.Description, &result.Email, &result.State, &result.Category)
+		err = rows.Scan(&result.Id, &result.Description, &result.Email, &result.State, &result.Category, &result.Image)
 		if err != nil {
 			panic(err)
 		}
