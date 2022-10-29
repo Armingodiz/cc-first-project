@@ -2,13 +2,17 @@ package brokerService
 
 import (
 	"encoding/json"
-	"cc-first-project/user-service/models"
+	"log"
+	"cc-first-project/advertisement-service/models"
+	"os"
 
 	"github.com/streadway/amqp"
 )
 
 type BrokerService interface {
-	Publish(ad models.Advertisement) error
+	StartConsuming() (chan models.Advertisement, chan error, error)
+	CloseConnection() error
+	CloseChannel() error
 }
 
 func NewBrokerService() BrokerService {
@@ -20,54 +24,75 @@ type RabbitMQBrokerService struct {
 	Channel    *amqp.Channel
 }
 
-func (r *RabbitMQBrokerService) Publish(ad models.Advertisement) error {
-	// Define RabbitMQ server URL.
+func (r *RabbitMQBrokerService) StartConsuming() (advertisementChann chan models.Advertisement, errChann chan error, err error) {
 	amqpServerURL := "amqps://dfyoughc:4RKqichqlzRebd-zntErvAecOVCM5rkM@kangaroo.rmq.cloudamqp.com/dfyoughc"
 	amqpQueueName := "advertisements"
-	// Create a new RabbitMQ connection.
 	connectRabbitMQ, err := amqp.Dial(amqpServerURL)
 	if err != nil {
-		return err
+		return
 	}
-	defer connectRabbitMQ.Close()
-
-	// Let's start by opening a channel to our RabbitMQ
-	// instance over the connection we have already
-	// established.
+	r.Connection = connectRabbitMQ
 	channelRabbitMQ, err := connectRabbitMQ.Channel()
 	if err != nil {
-		return err
+		return
 	}
-	defer channelRabbitMQ.Close()
-	// With the instance and declare Queues that we can
-	// publish and subscribe to.
-	_, err = channelRabbitMQ.QueueDeclare(
-		amqpQueueName, // queue name
-		true,          // durable ==> if server restarts, messages will be there
-		false,         // auto delete
+	r.Channel = channelRabbitMQ
+	queue, err := r.Channel.QueueDeclare(
+		amqpQueueName, // name
+		true,          // durable (will survive server restarts)
+		false,         // delete when unused
 		false,         // exclusive
-		false,         // no wait
+		false,         // no-wait
 		nil,           // arguments
 	)
 	if err != nil {
-		return err
+		return
 	}
-	adBytes, err := json.Marshal(ad)
+	err = r.Channel.Qos( // it is for fair dispatch and means if there is no free workers, the message will be put in the queue and will be delivered to the next worker.
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
 	if err != nil {
-		return err
-	}
-	message := amqp.Publishing{
-		DeliveryMode: amqp.Persistent, // Persistent ==> if server restarts, messages will be there
-		ContentType:  "application/json",
-		Body:         adBytes,
+		return
 	}
 
-	// Attempt to publish a message to the queue.
-	return channelRabbitMQ.Publish(
-		"",            // exchange
-		amqpQueueName, // queue name
-		false,         // mandatory
-		false,         // immediate
-		message,       // message to publish
+	// Subscribing to QueueService1 for getting messages.
+	messages, err := channelRabbitMQ.Consume(
+		queue.Name, // queue name
+		"",         // consumer
+		false,      // auto-ack == > message.Ack(false) ==> message will be removed
+		false,      // exclusive
+		false,      // no local
+		false,      // no wait
+		nil,        // arguments
 	)
+	if err != nil {
+		return
+	}
+
+	taskChann = make(chan models.Advertisement, 10)
+	errChann = make(chan error, 2)
+	go func() {
+		for message := range messages {
+			var advertisement models.Advertisement
+			err := json.Unmarshal(message.Body, &advertisement)
+			if err != nil {
+				log.Println("Error:", err)
+				errChann <- err
+				return
+			}
+			message.Ack(false)
+			advertisementChann <- Advertisement
+		}
+	}()
+	return
+}
+
+func (r *RabbitMQBrokerService) CloseConnection() error {
+	return r.Connection.Close()
+}
+
+func (r *RabbitMQBrokerService) CloseChannel() error {
+	return r.Channel.Close()
 }
