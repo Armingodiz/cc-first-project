@@ -5,13 +5,14 @@ import (
     "io/ioutil"
     "net/http"
 	"encoding/json"
+	"errors"
 )
 
 type ImageService interface {
 	GetTag(imageUrl string) (string, error)
 }
 
-func NewImageService() MailService {
+func NewImageService() ImageService {
 	return &ImaggaService{}
 }
 
@@ -38,21 +39,22 @@ func (s *ImaggaService) GetTag(imageUrl string) (string, error) {
 	if resp.StatusCode != 200 {
 		return "", errors.New("Error getting image tag: " + string(resp_body))
 	}
-	type Tag struct {
-		result struct{
-			tags []struct{
-				confidence float64
-				tag struct{
-					en string
-				}
-			}
-		}
+	type Result struct {
+		ResultTag map[string]interface{} `json:"result"`
 	}
-	var tag Tag
-	json.Unmarshal(resp_body, &tag)
-	for _, t := range tag.result.tags {
-		if t.tag.en == "Vehicle" && t.confidence > 0.5 {
-			return t.tag.en, nil
+
+	var res Result
+	json.Unmarshal(resp_body, &res)
+	tags := res.ResultTag["tags"].([]interface{})
+	for _, tag := range tags {
+		tagMap := tag.(map[string]interface{})
+		fmt.Println(tagMap)
+		confidence := tagMap["confidence"].(float64)
+		if confidence > 0.5 {
+			en := tagMap["tag"].(map[string]interface{})["en"].(string)
+			if en == "vehicle"{
+				return "vehicle", nil
+			}
 		}
 	}
 	return "", errors.New("Image is not clear enough")

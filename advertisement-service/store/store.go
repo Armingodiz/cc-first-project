@@ -3,10 +3,6 @@ package store
 import (
 	"database/sql"
 	_ "github.com/lib/pq"
-	"errors"
-	"fmt"
-	"context"
-	"cc-first-project/advertisement-service/models"
 )
 
 func NewStore(db *sql.DB) Store {

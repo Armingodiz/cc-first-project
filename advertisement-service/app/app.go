@@ -5,7 +5,12 @@ import (
 	"cc-first-project/advertisement-service/services/brokerService"
 	"cc-first-project/advertisement-service/services/emailService"
 	"cc-first-project/advertisement-service/services/imageService"
+	"cc-first-project/advertisement-service/models"
 	"cc-first-project/advertisement-service/store"
+	"database/sql"
+	"net/url"
+
+	_ "github.com/lib/pq"
 )
 
 type App struct {
@@ -22,7 +27,7 @@ func NewApp() *App {
 	}
 	return &App{
 		BrokerService: brokerService.NewBrokerService(),
-		MailService:   emailService.NewMailService(config.Configs.App.SenderEmail),
+		MailService:   emailService.NewMailService("armingodarzi1380@gmail.com"),
 		AdStore: Store,
 		ImageService: imageService.NewImageService(),
 	}
@@ -41,18 +46,20 @@ func (a *App) Start() error {
 			category, err := a.ImageService.GetTag(ad.Image)
 			var state string 
 			if err == nil{
-				state = models.Advertisement.AdvertisementStateAccepted
+				state = models.AdvertisementStateAccepted
 			}else{
-				state = models.Advertisement.AdvertisementStateRejected
-				log.Println("Error getting ad image category: ", err)
-				errChann <- err
+				state = models.AdvertisementStateRejected
+				if err.Error() != "Image is not clear enough"{
+					log.Println("Error getting ad image category: ", err)
+					errChann <- err
+				}
 			}
 			err = a.AdStore.SetCategory(ad.Id, category, state)
 			if err != nil {
 				log.Println("Error setting as state: ", err)
 				errChann <- err
 			}
-			err := a.MailService.SendEmail(ad.Email, "your Ad was accepted")
+			err = a.MailService.SendEmail(ad.Email, "your Ad was accepted")
 			if err != nil {
 				log.Println("Error sending email: ", err)
 				errChann <- err

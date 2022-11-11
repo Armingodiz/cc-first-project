@@ -1,10 +1,6 @@
 package emailService
 
 import (
-	"multiverse/notifier/config"
-
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 type MailService interface {
@@ -20,13 +16,17 @@ type SendGridMailService struct {
 }
 
 func (s *SendGridMailService) SendEmail(target, text string) error {
-	from := mail.NewEmail("multiverse", s.SenderEmail)
-	subject := "welcome email"
-	to := mail.NewEmail("for User", target)
-	plainTextContent := text
-	htmlContent := "<strong>" + text + "</strong>"
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(config.Configs.Secrets.SendGridToken)
-	_, err := client.Send(message)
+	mg := mailgun.NewMailgun("sandboxb55f46d9ae404e72bf9ba93b3c12c604.mailgun.org", apiKey)
+    m := mg.NewMessage(
+        "Excited User <mailgun@YOUR_DOMAIN_NAME>",
+        "Hello",
+        "Testing some Mailgun awesomeness!",
+        "YOU@YOUR_DOMAIN_NAME",
+    )
+
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+    defer cancel()
+
+    _, _, err := mg.Send(ctx, m)
 	return err
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"cc-first-project/advertisement-service/models"
-	"os"
 
 	"github.com/streadway/amqp"
 )
@@ -71,7 +70,7 @@ func (r *RabbitMQBrokerService) StartConsuming() (advertisementChann chan models
 		return
 	}
 
-	taskChann = make(chan models.Advertisement, 10)
+	advertisementChann = make(chan models.Advertisement, 10)
 	errChann = make(chan error, 2)
 	go func() {
 		for message := range messages {
@@ -83,7 +82,7 @@ func (r *RabbitMQBrokerService) StartConsuming() (advertisementChann chan models
 				return
 			}
 			message.Ack(false)
-			advertisementChann <- Advertisement
+			advertisementChann <- advertisement
 		}
 	}()
 	return

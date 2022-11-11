@@ -6,6 +6,7 @@ import (
 	"cc-first-project/user-service/services/userService"
 	"net/http"
 	"github.com/google/uuid"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +31,8 @@ func (u *UserController) AddAdvertisement() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		ad.Image = url
+		fmt.Println(url)
+		//ad.Image = url
 		id, err := u.UserService.CreateAdvertisement(&ad)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
