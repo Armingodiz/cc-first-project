@@ -54,16 +54,6 @@ func (s *userService) UploadImageFile(adId string, imageUrl string) (string, err
 		return "", err
 	}
 	defer res.Body.Close()
-	_, err = io.Copy(f, res.Body)
-
-	if err != nil {
-		return "", err
-	}
-	file, err := os.Open(fname)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
 
 	sess, err := session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials("0f4b4ae8-3d7f-4051-9c5a-6e4c36cba55b", "0f16304e084b0ce416c28a3a6780eac1485831bdfe034c039356767bee37623b", ""),
@@ -74,7 +64,7 @@ func (s *userService) UploadImageFile(adId string, imageUrl string) (string, err
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String("arminccproject"),
 		Key:    aws.String(adId),
-		Body:   file,
+		Body:   res.Body,
 	})
 	if err != nil {
 		return "", err
