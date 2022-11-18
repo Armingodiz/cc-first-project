@@ -8,6 +8,7 @@ import (
 	"cc-first-project/advertisement-service/store"
 	"database/sql"
 	"log"
+	"fmt"
 	"net/url"
 
 	_ "github.com/lib/pq"
@@ -50,18 +51,15 @@ func (a *App) Start() error {
 			} else {
 				state = models.AdvertisementStateRejected
 				if err.Error() != "Image is not clear enough" {
-					log.Println("Error getting ad image category: ", err)
 					errChann <- err
 				}
 			}
 			err = a.AdStore.SetCategory(ad.Id, category, state)
 			if err != nil {
-				log.Println("Error setting as state: ", err)
 				errChann <- err
 			}
-			err = a.MailService.SendEmail(ad.Email, "your Ad was accepted")
+			err = a.MailService.SendEmail(ad.Email, fmt.Sprintf("your advertisment was %s", state))
 			if err != nil {
-				log.Println("Error sending email: ", err)
 				errChann <- err
 			}
 		}
