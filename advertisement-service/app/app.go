@@ -1,13 +1,13 @@
 package app
 
 import (
-	"log"
+	"cc-first-project/advertisement-service/models"
 	"cc-first-project/advertisement-service/services/brokerService"
 	"cc-first-project/advertisement-service/services/emailService"
 	"cc-first-project/advertisement-service/services/imageService"
-	"cc-first-project/advertisement-service/models"
 	"cc-first-project/advertisement-service/store"
 	"database/sql"
+	"log"
 	"net/url"
 
 	_ "github.com/lib/pq"
@@ -16,8 +16,8 @@ import (
 type App struct {
 	BrokerService brokerService.BrokerService
 	MailService   emailService.MailService
-	AdStore store.Store
-	ImageService imageService.ImageService
+	AdStore       store.Store
+	ImageService  imageService.ImageService
 }
 
 func NewApp() *App {
@@ -27,9 +27,9 @@ func NewApp() *App {
 	}
 	return &App{
 		BrokerService: brokerService.NewBrokerService(),
-		MailService:   emailService.NewMailService("armingodarzi1380@gmail.com"),
-		AdStore: Store,
-		ImageService: imageService.NewImageService(),
+		MailService:   emailService.NewMailService(),
+		AdStore:       Store,
+		ImageService:  imageService.NewImageService(),
 	}
 }
 
@@ -44,12 +44,12 @@ func (a *App) Start() error {
 		for ad := range adChannel {
 			log.Println("Received Ad: ", ad)
 			category, err := a.ImageService.GetTag(ad.Image)
-			var state string 
-			if err == nil{
+			var state string
+			if err == nil {
 				state = models.AdvertisementStateAccepted
-			}else{
+			} else {
 				state = models.AdvertisementStateRejected
-				if err.Error() != "Image is not clear enough"{
+				if err.Error() != "Image is not clear enough" {
 					log.Println("Error getting ad image category: ", err)
 					errChann <- err
 				}

@@ -1,32 +1,39 @@
 package emailService
 
 import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/mailgun/mailgun-go/v4"
 )
+
+var yourDomain string = "sandboxb55f46d9ae404e72bf9ba93b3c12c604.mailgun.org"
+var privateAPIKey string = "your-private-key"
+var senderEmail string = "armingodarzi1380@gmail.com"
 
 type MailService interface {
 	SendEmail(target, text string) error
 }
 
-func NewMailService(senderEmail string) MailService {
-	return &SendGridMailService{SenderEmail: senderEmail}
+func NewMailService() MailService {
+	return &MailgunMailService{}
 }
 
-type SendGridMailService struct {
-	SenderEmail string
+type MailgunMailService struct {
 }
 
-func (s *SendGridMailService) SendEmail(target, text string) error {
-	mg := mailgun.NewMailgun("sandboxb55f46d9ae404e72bf9ba93b3c12c604.mailgun.org", apiKey)
-    m := mg.NewMessage(
-        "Excited User <mailgun@YOUR_DOMAIN_NAME>",
-        "Hello",
-        "Testing some Mailgun awesomeness!",
-        "YOU@YOUR_DOMAIN_NAME",
-    )
+func (es *MailgunMailService) SendEmail(target, text string) error {
+	mg := mailgun.NewMailgun(yourDomain, privateAPIKey)
 
-    ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-    defer cancel()
+	subject := "Informing you about your addvertisement status"
 
-    _, _, err := mg.Send(ctx, m)
+	message := mg.NewMessage(senderEmail, subject, text, target)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	resp, id, err := mg.Send(ctx, message)
+	log.Println(resp, id)
 	return err
 }
